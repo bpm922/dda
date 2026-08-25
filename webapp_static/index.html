@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDA Colony Lookup — Windows XP Edition</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   WINDOWS XP — LUNA BLUE THEME
+   ═══════════════════════════════════════════════════════════ */
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+  font-size: 11px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* Bliss wallpaper */
+  background: linear-gradient(180deg,
+    #3B82D9 0%, #5B9BD5 35%, #4CAF50 42%, #6CC66C 55%, #4CAF50 80%, #3d8e3d 100%);
+  background-attachment: fixed;
+}
+body::before {
+  content:"";
+  position:fixed; top:0; left:0; right:0; bottom:40px;
+  background:
+    radial-gradient(ellipse at 30% 80%, #4dbd4d 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 75%, #5dc25d 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 30%, #5B9BD5 0%, #3A7BD5 30%, transparent 60%),
+    linear-gradient(180deg, #3B82D9 0%, #5B9BD5 35%, #4CAF50 42%, #6CC66C 55%, #4CAF50 80%, #3d8e3d 100%);
+  z-index:0;
+}
+
+/* ── XP WINDOW FRAME ── */
+.xp-window {
+  position: fixed;
+  top: 12px; left: 12px; right: 12px; bottom: 52px;
+  z-index: 10;
+  display: flex; flex-direction: column;
+  border: 1px solid #0054E3;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 2px 4px 16px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+
+/* Title bar */
+.titlebar {
+  background: linear-gradient(180deg, #0997FF 0%, #0860C8 10%, #044DA0 30%, #023FA0 60%, #0070E0 100%);
+  height: 30px;
+  display: flex; align-items: center;
+  padding: 0 6px;
+  border-radius: 8px 8px 0 0;
+  flex-shrink: 0;
+}
+.titlebar-icon { font-size:14px; margin-right:6px; }
+.titlebar-text {
+  flex:1; color:#fff; font-size:12px; font-weight:bold;
+  text-shadow:1px 1px 2px rgba(0,0,0,0.5);
+  white-space:nowrap; overflow:hidden;
+}
+.titlebar-buttons { display:flex; gap:2px; }
+.tb { width:21px; height:21px; border:none; border-radius:3px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:bold; cursor:pointer; color:#fff;
+  text-shadow:1px 1px 0 rgba(0,0,0,0.3); }
+.tb-min,.tb-max { background:linear-gradient(180deg,#3C8CF8,#1A4CB8); border:1px solid #1840A0; }
+.tb-close { background:linear-gradient(180deg,#E88C6C,#D04020,#B82810); border:1px solid #8C2000; }
+
+/* ── BODY ── */
+.window-body {
+  flex:1; display:flex; overflow:hidden; background:#ECE9D8;
+}
+
+/* ═════════ LEFT SIDEBAR ═════════ */
+.sidebar {
+  width: 230px; min-width:230px;
+  background: linear-gradient(180deg, #6B90DA 0%, #4B72C8 5%, #6B90DA 10%, #BACFEB 18%, #D6E2F0 100%);
+  border-right: 1px solid #ACA899;
+  overflow-y: auto;
+  flex-shrink:0;
+  padding:8px;
+  display:flex; flex-direction:column; gap:6px;
+}
+
+/* Group box */
+.side-group {
+  border-radius:6px; overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,0.15);
+}
+.side-header {
+  background:linear-gradient(180deg,#FFF,#C9DBEF);
+  padding:7px 10px; font-size:11px; font-weight:bold; color:#215DC6;
+  border-bottom:1px solid #B4C8E0;
+}
+.side-body { background:#D6DFF7; padding:8px 10px; }
+
+/* Search */
+.search-box {
+  width:100%; height:24px;
+  border:1px solid #7F9DB9; padding:2px 6px;
+  font-size:11px; font-family:Tahoma,sans-serif;
+  outline:none; background:#fff;
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.08);
+}
+.search-box:focus { border-color:#316AC5; }
+.search-btn {
+  width:100%; margin-top:6px;
+  background:linear-gradient(180deg,#FFF,#ECE9D8 50%,#D6D2C2);
+  border:1px solid #003399; border-radius:3px;
+  padding:4px; font-size:11px; font-family:Tahoma,sans-serif;
+  cursor:pointer; font-weight:bold; color:#003399;
+}
+.search-btn:hover { background:linear-gradient(180deg,#E8F0FF,#C8D8F0 50%,#A8B8D8); }
+
+/* Filter pills */
+.filter-group { display:flex; flex-direction:column; gap:4px; }
+.filter-btn {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 8px; font-size:11px; font-family:Tahoma,sans-serif;
+  background:#EBE8DB; border:1px solid #C0BBA8; border-radius:3px;
+  cursor:pointer; color:#333; transition: all 0.1s;
+}
+.filter-btn:hover { background:#D8E8FF; border-color:#316AC5; color:#003399; }
+.filter-btn.active {
+  background:linear-gradient(180deg,#C0D8FF,#80A8E0);
+  border-color:#316AC5; color:#003399; font-weight:bold;
+}
+.filter-count {
+  margin-left:auto; font-size:10px; color:#888;
+  background:#FFF; padding:0 5px; border-radius:8px;
+  border:1px solid #DDD;
+}
+.filter-btn.active .filter-count { background:#003399; color:#FFF; border-color:#003399; }
+
+/* Stats */
+.stat-row { display:flex; justify-content:space-between; padding:2px 0; font-size:11px; color:#333; }
+.stat-val { font-weight:bold; color:#003399; }
+
+/* ═════════ MAIN CONTENT ═════════ */
+.main-area {
+  flex:1; display:flex; flex-direction:column; overflow:hidden; background:#FFF;
+}
+
+/* Top breadcrumb bar */
+.breadcrumb-bar {
+  background:#ECE9D8; border-bottom:1px solid #ACA899;
+  padding:4px 12px; font-size:11px; color:#666;
+  display:flex; align-items:center; gap:4px; flex-shrink:0;
+}
+.breadcrumb-bar a {
+  color:#003399; text-decoration:none; cursor:pointer;
+}
+.breadcrumb-bar a:hover { text-decoration:underline; }
+.breadcrumb-bar .sep { color:#999; }
+
+/* Content views */
+.view { display:none; flex:1; overflow:auto; }
+.view.active { display:flex; flex-direction:column; }
+
+/* ═════════ LISTING VIEW (e-commerce grid) ═════════ */
+.listing-header {
+  padding:10px 16px; border-bottom:1px solid #ECE9D8;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0; background:#FAFAF5;
+}
+.listing-header h2 { font-size:13px; color:#003399; }
+.listing-count { font-size:11px; color:#666; }
+
+.colony-grid {
+  flex:1; overflow:auto; padding:8px;
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap:8px;
+  align-content: start;
+}
+
+/* Colony Card */
+.colony-card {
+  background:#FFF;
+  border:1px solid #D6D2C2;
+  border-radius:4px;
+  padding:10px 12px;
+  cursor:pointer;
+  transition: all 0.15s;
+  display:flex; flex-direction:column; gap:4px;
+}
+.colony-card:hover {
+  border-color:#316AC5;
+  box-shadow:0 2px 8px rgba(49,106,197,0.25);
+  background:#F0F4FF;
+}
+.card-name {
+  font-size:12px; font-weight:bold; color:#003399;
+  line-height:1.3; word-break:break-word;
+}
+.card-meta {
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+}
+.badge {
+  display:inline-block; padding:1px 6px; border-radius:2px;
+  font-size:9px; font-weight:bold; text-transform:uppercase; letter-spacing:0.3px;
+}
+.badge-affluent { background:#FFF3CD; color:#856404; border:1px solid #FFD700; }
+.badge-regular { background:#D4EDDA; color:#155724; border:1px solid #28A745; }
+.badge-boundary { background:#CCE5FF; color:#004085; border:1px solid #4DA6FF; }
+.badge-no-boundary { background:#F8D7DA; color:#721C24; border:1px solid #F5C6CB; }
+.card-reg { font-size:10px; color:#888; }
+.card-pdf {
+  font-size:10px; color:#003399; text-decoration:none;
+  display:inline-flex; align-items:center; gap:3px;
+}
+.card-pdf:hover { text-decoration:underline; }
+
+/* Pagination */
+.pagination {
+  background:#ECE9D8; border-top:1px solid #ACA899;
+  padding:6px 12px; display:flex; align-items:center;
+  justify-content:center; gap:4px; flex-shrink:0;
+}
+.pg-btn {
+  background:linear-gradient(180deg,#FFF,#ECE9D8 50%,#D6D2C2);
+  border:1px solid #ACA899; padding:3px 10px;
+  font-size:11px; font-family:Tahoma,sans-serif; cursor:pointer;
+}
+.pg-btn:hover { border-color:#316AC5; }
+.pg-btn:disabled { opacity:0.4; cursor:default; }
+.pg-btn.current { background:#316AC5; color:#FFF; border-color:#003399; font-weight:bold; }
+.pg-info { font-size:11px; color:#666; margin:0 8px; }
+
+/* ═════════ DETAIL VIEW (product page style) ═════════ */
+.detail-view { padding:0; }
+.detail-hero {
+  background: linear-gradient(135deg, #003399 0%, #0054E3 40%, #316AC5 100%);
+  color:#FFF; padding:20px 24px;
+  display:flex; align-items:flex-start; gap:16px;
+}
+.detail-hero-icon { font-size:48px; flex-shrink:0; }
+.detail-hero-info { flex:1; }
+.detail-hero-info h1 {
+  font-size:18px; font-weight:bold; margin-bottom:4px;
+  text-shadow:1px 1px 2px rgba(0,0,0,0.3);
+}
+.detail-hero-info .hero-meta {
+  display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;
+}
+.hero-badge {
+  padding:2px 10px; border-radius:3px;
+  font-size:10px; font-weight:bold; text-transform:uppercase;
+}
+.hero-affluent { background:rgba(255,215,0,0.9); color:#5C3A00; }
+.hero-regular { background:rgba(40,167,69,0.85); color:#FFF; }
+.hero-boundary-yes { background:rgba(255,255,255,0.2); color:#FFF; border:1px solid rgba(255,255,255,0.4); }
+.hero-boundary-no { background:rgba(220,53,69,0.7); color:#FFF; }
+
+.detail-content { padding:16px 24px; }
+
+/* Info sections (like e-commerce product specs) */
+.info-section {
+  margin-bottom:16px;
+  border:1px solid #D6D2C2;
+  border-radius:4px;
+  overflow:hidden;
+}
+.info-section-header {
+  background:linear-gradient(180deg,#F6F4EC,#ECE9D8);
+  padding:8px 14px; font-size:12px; font-weight:bold; color:#003399;
+  border-bottom:1px solid #D6D2C2;
+  display:flex; align-items:center; gap:6px;
+}
+.info-section-body { background:#FAFAF5; }
+.info-row {
+  display:flex; padding:7px 14px;
+  border-bottom:1px solid #ECE9D8;
+  font-size:11px;
+}
+.info-row:last-child { border-bottom:none; }
+.info-label { width:180px; font-weight:bold; color:#555; flex-shrink:0; }
+.info-value { flex:1; color:#000; word-break:break-word; }
+.info-value a { color:#003399; text-decoration:none; }
+.info-value a:hover { text-decoration:underline; }
+
+/* Status indicator */
+.status-pill {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:2px 10px; border-radius:10px; font-size:11px; font-weight:bold;
+}
+.status-eligible { background:#D4EDDA; color:#155724; border:1px solid #28A745; }
+.status-excluded { background:#F8D7DA; color:#721C24; border:1px solid #DC3545; }
+.status-delineated { background:#CCE5FF; color:#004085; border:1px solid #4DA6FF; }
+.status-pending { background:#FFF3CD; color:#856404; border:1px solid #FFC107; }
+
+/* PDF download button */
+.pdf-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 14px; border-radius:3px;
+  font-size:11px; font-family:Tahoma,sans-serif;
+  text-decoration:none; font-weight:bold; cursor:pointer;
+  background:linear-gradient(180deg,#FFF,#ECE9D8 50%,#D6D2C2);
+  border:1px solid #003399; color:#003399;
+}
+.pdf-btn:hover {
+  background:linear-gradient(180deg,#E8F0FF,#C8D8F0 50%,#A8B8D8);
+}
+.pdf-btn.disabled {
+  opacity:0.4; cursor:default; pointer-events:none;
+  border-color:#ACA899; color:#999;
+}
+
+/* ── STATUS BAR ── */
+.statusbar {
+  background:#ECE9D8; border-top:1px solid #ACA899;
+  padding:2px 10px; font-size:11px; color:#333;
+  display:flex; gap:16px; flex-shrink:0; height:22px; align-items:center;
+}
+
+/* ── TASKBAR ── */
+.taskbar {
+  position:fixed; bottom:0; left:0; right:0; height:40px; z-index:50;
+  background:linear-gradient(180deg,#3168D5 0%,#1940A0 100%);
+  border-top:2px solid #0C3CB0;
+  display:flex; align-items:center;
+  box-shadow:0 -1px 4px rgba(0,0,0,0.3);
+}
+.start-btn {
+  background:linear-gradient(180deg,#55B855,#1D7E1D);
+  border:none; border-radius:0 8px 8px 0;
+  height:38px; padding:0 14px 0 8px;
+  display:flex; align-items:center; gap:6px; cursor:pointer;
+}
+.start-btn span { color:#fff; font-size:13px; font-weight:bold; font-style:italic;
+  text-shadow:1px 1px 2px rgba(0,0,0,0.5); }
+.taskbar-app {
+  background:linear-gradient(180deg,#3C6CF0,#1C48B8);
+  border:1px solid #0C3CB0; border-radius:2px;
+  padding:4px 12px; margin-left:6px;
+  color:#fff; font-size:11px; font-weight:bold;
+  text-shadow:1px 1px 1px rgba(0,0,0,0.3);
+}
+.taskbar-tray {
+  margin-left:auto; display:flex; align-items:center; gap:8px;
+  padding:0 12px; height:100%;
+  background:linear-gradient(180deg,#1880D0,#0C60B0);
+  border-left:1px solid #0C3CB0;
+  font-size:11px; color:#fff;
+  text-shadow:1px 1px 1px rgba(0,0,0,0.3);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width:768px) {
+  .sidebar { display:none; }
+  .xp-window { left:4px; right:4px; top:4px; }
+  .colony-grid { grid-template-columns:1fr; }
+  .detail-hero { flex-direction:column; }
+  .info-row { flex-direction:column; gap:2px; }
+  .info-label { width:auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ MAIN WINDOW ═══════ -->
+<div class="xp-window">
+
+  <!-- Title Bar -->
+  <div class="titlebar">
+    <span class="titlebar-icon">🏛️</span>
+    <span class="titlebar-text">DDA Colony Lookup — PM-UDAY Directory — Windows XP Edition</span>
+    <div class="titlebar-buttons">
+      <button class="tb tb-min">_</button>
+      <button class="tb tb-max">□</button>
+      <button class="tb tb-close">✕</button>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="window-body">
+
+    <!-- ═══════ SIDEBAR ═══════ -->
+    <div class="sidebar">
+
+      <!-- Search -->
+      <div class="side-group">
+        <div class="side-header">🔍 Search Colony</div>
+        <div class="side-body">
+          <input type="text" class="search-box" id="searchInput"
+                 placeholder="Colony name, reg no…"
+                 onkeydown="if(event.key==='Enter')doSearch()">
+          <button class="search-btn" onclick="doSearch()">🔍 Search</button>
+        </div>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="side-group">
+        <div class="side-header">📂 Category</div>
+        <div class="side-body filter-group">
+          <button class="filter-btn active" data-cat="" onclick="setCategory('')">
+            📁 All Colonies <span class="filter-count" id="cntAll">1,800</span>
+          </button>
+          <button class="filter-btn" data-cat="affluent" onclick="setCategory('affluent')">
+            🏘️ Affluent (Excluded) <span class="filter-count" id="cntAffluent">69</span>
+          </button>
+          <button class="filter-btn" data-cat="regular" onclick="setCategory('regular')">
+            🏠 Regular UCs (Eligible) <span class="filter-count" id="cntRegular">1,731</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Boundary Filter -->
+      <div class="side-group">
+        <div class="side-header">🗺️ Boundary Status</div>
+        <div class="side-body filter-group">
+          <button class="filter-btn active" data-bnd="" onclick="setBoundary('')">
+            🌐 All
+          </button>
+          <button class="filter-btn" data-bnd="yes" onclick="setBoundary('yes')">
+            ✅ Boundary Available <span class="filter-count" id="cntBndYes">1,500</span>
+          </button>
+          <button class="filter-btn" data-bnd="no" onclick="setBoundary('no')">
+            ❌ Boundary Pending <span class="filter-count" id="cntBndNo">300</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="side-group">
+        <div class="side-header">📊 Quick Stats</div>
+        <div class="side-body">
+          <div class="stat-row"><span>Final Boundary PDFs:</span><span class="stat-val" id="stPdf">1,262</span></div>
+          <div class="stat-row"><span>Satellite PDFs:</span><span class="stat-val" id="stSat">238</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════ MAIN AREA ═══════ -->
+    <div class="main-area">
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb-bar">
+        <a onclick="goHome()">🏛️ Home</a>
+        <span class="sep">›</span>
+        <span id="breadcrumb">All Colonies</span>
+      </div>
+
+      <!-- ═══ LISTING VIEW ═══ -->
+      <div class="view active" id="listingView">
+        <div class="listing-header">
+          <h2 id="listingTitle">All Colonies</h2>
+          <span class="listing-count" id="listingCount">Loading colonies...</span>
+        </div>
+        <div class="colony-grid" id="colonyGrid"></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+
+      <!-- ═══ DETAIL VIEW ═══ -->
+      <div class="view" id="detailView">
+        <div class="detail-hero" id="detailHero"></div>
+        <div class="detail-content" id="detailContent"></div>
+      </div>
+
+      <!-- Status bar -->
+      <div class="statusbar">
+        <span id="statusText">Ready</span>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════ TASKBAR ═══════ -->
+<div class="taskbar">
+  <button class="start-btn" onclick="goHome()">
+    <span style="font-size:18px;">🪟</span>
+    <span>start</span>
+  </button>
+  <div class="taskbar-app">🏛️ DDA Colony Lookup</div>
+  <div class="taskbar-tray">
+    <span>🔔</span>
+    <span id="clock"></span>
+  </div>
+</div>
+
+<!-- ═══════ JAVASCRIPT ═══════ -->
+<script>
+/* ── State ── */
+let allColonies = [];
+let cat = "", bnd = "", query = "", page = 1;
+const PER = 50;
+
+/* ── Clock ── */
+function tick() {
+  const d = new Date(), h = d.getHours(), m = String(d.getMinutes()).padStart(2,"0");
+  document.getElementById("clock").textContent = `${h%12||12}:${m} ${h>=12?"PM":"AM"}`;
+}
+tick(); setInterval(tick, 30000);
+
+/* ── Load Dataset (Works both with Flask API and static GitHub Pages) ── */
+async function loadDataset() {
+  try {
+    let res = await fetch("data/colonies.json");
+    if (!res.ok) {
+      res = await fetch("/data/colonies.json");
+    }
+    allColonies = await res.json();
+  } catch(e) {
+    try {
+      const res = await fetch("/api/search?per_page=2000");
+      const data = await res.json();
+      allColonies = data.results || [];
+    } catch(err) {
+      console.error("Failed to load colonies dataset", err);
+    }
+  }
+
+  // Update dynamic counters
+  if (allColonies.length > 0) {
+    const total = allColonies.length;
+    const aff = allColonies.filter(c => c.category === "affluent").length;
+    const reg = allColonies.filter(c => c.category === "regular").length;
+    const bndYes = allColonies.filter(c => c.boundary_delineated).length;
+    const bndNo = total - bndYes;
+    const finalPdfs = allColonies.filter(c => c.final_boundary_pdf_url).length;
+    const satPdfs = allColonies.filter(c => c.satellite_boundary_pdf_url).length;
+
+    document.getElementById("cntAll").textContent = total.toLocaleString();
+    document.getElementById("cntAffluent").textContent = aff.toLocaleString();
+    document.getElementById("cntRegular").textContent = reg.toLocaleString();
+    document.getElementById("cntBndYes").textContent = bndYes.toLocaleString();
+    document.getElementById("cntBndNo").textContent = bndNo.toLocaleString();
+    document.getElementById("stPdf").textContent = finalPdfs.toLocaleString();
+    document.getElementById("stSat").textContent = satPdfs.toLocaleString();
+  }
+
+  doSearch();
+}
+
+/* ── Filters ── */
+function setCategory(c) {
+  cat = c; page = 1;
+  document.querySelectorAll("[data-cat]").forEach(b =>
+    b.classList.toggle("active", b.dataset.cat === c));
+  doSearch();
+}
+function setBoundary(b) {
+  bnd = b; page = 1;
+  document.querySelectorAll("[data-bnd]").forEach(btn =>
+    btn.classList.toggle("active", btn.dataset.bnd === b));
+  doSearch();
+}
+
+/* ── Search & Filter Logic ── */
+function doSearch() {
+  query = document.getElementById("searchInput").value.trim().toLowerCase();
+  showView("listing");
+
+  let filtered = allColonies;
+
+  // Filter Category
+  if (cat === "affluent" || cat === "regular") {
+    filtered = filtered.filter(c => c.category === cat);
+  }
+
+  // Filter Boundary
+  if (bnd === "yes") {
+    filtered = filtered.filter(c => c.boundary_delineated);
+  } else if (bnd === "no") {
+    filtered = filtered.filter(c => !c.boundary_delineated);
+  }
+
+  // Filter Search Query
+  if (query) {
+    const tokens = query.split(/\s+/);
+    filtered = filtered.filter(c => {
+      const searchStr = `${c.name || ''} ${c.reg_number || ''} ${c.map_number || ''} ${c.remarks || ''}`.toLowerCase();
+      return tokens.every(t => searchStr.includes(t));
+    });
+  }
+
+  // Header Title
+  let title = "All Colonies";
+  if (cat === "affluent") title = "Affluent Colonies (Excluded from PM-UDAY)";
+  else if (cat === "regular") title = "Regular Unauthorized Colonies (PM-UDAY Eligible)";
+  if (query) title += ` — "${document.getElementById("searchInput").value.trim()}"`;
+
+  document.getElementById("listingTitle").textContent = title;
+  document.getElementById("breadcrumb").textContent = title;
+  document.getElementById("listingCount").textContent = `${filtered.length.toLocaleString()} colonies found`;
+
+  const totalPages = Math.ceil(filtered.length / PER) || 1;
+  if (page > totalPages) page = 1;
+
+  document.getElementById("statusText").textContent =
+    `Showing page ${page} of ${totalPages} (${filtered.length} results)`;
+
+  const startIdx = (page - 1) * PER;
+  const pageItems = filtered.slice(startIdx, startIdx + PER);
+
+  renderGrid(pageItems);
+  renderPages(filtered.length, totalPages);
+}
+
+/* ── Render Colony Cards ── */
+function renderGrid(colonies) {
+  const g = document.getElementById("colonyGrid");
+  if (!colonies.length) {
+    g.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#999;">
+      <div style="font-size:40px;margin-bottom:8px;">🔍</div>
+      No colonies found. Try a different search or filter.</div>`;
+    return;
+  }
+  g.innerHTML = colonies.map(c => {
+    const catBadge = c.category === "affluent"
+      ? `<span class="badge badge-affluent">🏘️ Affluent</span>`
+      : `<span class="badge badge-regular">🏠 Regular</span>`;
+    const bndBadge = c.boundary_delineated
+      ? `<span class="badge badge-boundary">🗺️ Boundary ✓</span>`
+      : `<span class="badge badge-no-boundary">📍 No Boundary</span>`;
+    const reg = c.reg_number ? `Reg #${c.reg_number}` : "";
+    const map = c.map_number ? ` · Map #${c.map_number}` : "";
+    const pdfUrl = c.final_boundary_pdf_url || c.satellite_boundary_pdf_url;
+    const pdfLink = pdfUrl
+      ? `<a class="card-pdf" href="${esc(pdfUrl)}" target="_blank" onclick="event.stopPropagation()">📄 View Boundary PDF</a>`
+      : "";
+    return `<div class="colony-card" onclick="openDetail(${c.colony_id})">
+      <div class="card-name">${esc(c.name)}</div>
+      <div class="card-meta">${catBadge} ${bndBadge}</div>
+      <div class="card-reg">${reg}${map}</div>
+      ${pdfLink}
+    </div>`;
+  }).join("");
+}
+
+function esc(s) { return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+/* ── Pagination ── */
+function renderPages(totalCount, totalPages) {
+  const bar = document.getElementById("pagination");
+  if (totalPages <= 1) { bar.innerHTML = ""; return; }
+  let html = `<button class="pg-btn" ${page<=1?"disabled":""} onclick="page--;doSearch()">◀ Prev</button>`;
+  const maxShow = 7;
+  let s = Math.max(1, page - 3), e = Math.min(totalPages, s + maxShow - 1);
+  if (e - s < maxShow - 1) s = Math.max(1, e - maxShow + 1);
+  if (s > 1) { html += pgBtn(1); if (s > 2) html += `<span class="pg-info">…</span>`; }
+  for (let i = s; i <= e; i++) html += pgBtn(i);
+  if (e < totalPages) { if (e < totalPages-1) html += `<span class="pg-info">…</span>`; html += pgBtn(totalPages); }
+  html += `<button class="pg-btn" ${page>=totalPages?"disabled":""} onclick="page++;doSearch()">Next ▶</button>`;
+  html += `<span class="pg-info">(${((page-1)*PER+1)}–${Math.min(page*PER,totalCount)} of ${totalCount.toLocaleString()})</span>`;
+  bar.innerHTML = html;
+}
+function pgBtn(n) { return `<button class="pg-btn${n===page?" current":""}" onclick="page=${n};doSearch()">${n}</button>`; }
+
+/* ── Detail View ── */
+function openDetail(id) {
+  const c = allColonies.find(item => item.colony_id === id);
+  if (!c) return;
+
+  showView("detail");
+  document.getElementById("breadcrumb").innerHTML =
+    `<a onclick="goHome()">All Colonies</a> <span class="sep">›</span> ${esc(c.name)}`;
+
+  const isAffluent = c.category === "affluent";
+  const catBadge = isAffluent
+    ? `<span class="hero-badge hero-affluent">🏘️ Affluent Colony</span>`
+    : `<span class="hero-badge hero-regular">🏠 Regular UC</span>`;
+  const bndBadge = c.boundary_delineated
+    ? `<span class="hero-badge hero-boundary-yes">🗺️ Boundary Delineated</span>`
+    : `<span class="hero-badge hero-boundary-no">📍 Boundary Pending</span>`;
+
+  document.getElementById("detailHero").innerHTML = `
+    <div class="detail-hero-icon">${isAffluent ? "🏘️" : "🏠"}</div>
+    <div class="detail-hero-info">
+      <h1>${esc(c.name)}</h1>
+      <div style="font-size:11px;opacity:0.85;">Colony ID: ${c.colony_id}${c.reg_number ? " · Registration No: " + esc(c.reg_number) : ""}${c.map_number ? " · Map No: " + esc(c.map_number) : ""}</div>
+      <div class="hero-meta">${catBadge} ${bndBadge}</div>
+    </div>`;
+
+  const pdfFinal = c.final_boundary_pdf_url
+    ? `<a class="pdf-btn" href="${esc(c.final_boundary_pdf_url)}" target="_blank">📄 Download Final Boundary Map PDF</a>`
+    : `<span class="pdf-btn disabled">📄 Final Boundary PDF — Not Available</span>`;
+  const pdfSat = c.satellite_boundary_pdf_url
+    ? `<a class="pdf-btn" href="${esc(c.satellite_boundary_pdf_url)}" target="_blank">🛰️ Download Satellite Boundary Map PDF</a>`
+    : `<span class="pdf-btn disabled">🛰️ Satellite Boundary PDF — Not Available</span>`;
+
+  const eligibility = isAffluent
+    ? `<span class="status-pill status-excluded">✗ EXCLUDED from PM-UDAY</span>`
+    : `<span class="status-pill status-eligible">✓ ELIGIBLE for PM-UDAY</span>`;
+  const bndStatus = c.boundary_delineated
+    ? `<span class="status-pill status-delineated">✓ Delineated</span>`
+    : `<span class="status-pill status-pending">⏳ Pending Demarcation</span>`;
+
+  const eligDetail = isAffluent
+    ? "This colony is <strong>excluded</strong> from the PM-UDAY scheme under Regulation 3(1) of the NCT of Delhi (Recognition of Property Rights) Regulations, 2019. Colonies inhabited by affluent sections are subject to a separate policy with higher development charges and stricter environmental norms."
+    : "This colony is <strong>eligible</strong> for PM-UDAY ownership rights under the NCT of Delhi (Recognition of Property Rights of Residents in Unauthorised Colonies) Act, 2019. Residents can apply for a Conveyance Deed / Authorisation Slip through the DDA PM-UDAY portal.";
+
+  document.getElementById("detailContent").innerHTML = `
+    <!-- Registration Details -->
+    <div class="info-section">
+      <div class="info-section-header">📋 Registration Details</div>
+      <div class="info-section-body">
+        <div class="info-row"><div class="info-label">Colony ID:</div><div class="info-value">${c.colony_id}</div></div>
+        <div class="info-row"><div class="info-label">Colony Name:</div><div class="info-value"><strong>${esc(c.name)}</strong></div></div>
+        <div class="info-row"><div class="info-label">Registration Number:</div><div class="info-value">${c.reg_number || "N/A (Direct Notification)"}</div></div>
+        <div class="info-row"><div class="info-label">Map Number:</div><div class="info-value">${c.map_number || "N/A"}</div></div>
+        <div class="info-row"><div class="info-label">Category:</div><div class="info-value">${isAffluent ? "Affluent Colony (Excluded from PM-UDAY)" : "Regular Unauthorized Colony"}</div></div>
+        <div class="info-row"><div class="info-label">Upload Date:</div><div class="info-value">${c.upload_date || "N/A"}</div></div>
+        <div class="info-row"><div class="info-label">Remarks / Clusters:</div><div class="info-value">${esc(c.remarks) || "N/A"}</div></div>
+      </div>
+    </div>
+
+    <!-- PM-UDAY Legal Status -->
+    <div class="info-section">
+      <div class="info-section-header">⚖️ PM-UDAY Legal Status</div>
+      <div class="info-section-body">
+        <div class="info-row"><div class="info-label">PM-UDAY Eligibility:</div><div class="info-value">${eligibility}</div></div>
+        <div class="info-row"><div class="info-label">Legal Basis:</div><div class="info-value">${eligDetail}</div></div>
+        <div class="info-row"><div class="info-label">Official Source:</div><div class="info-value"><a href="${esc(c.source_link) || "#"}" target="_blank">🌐 View on DDA Portal</a></div></div>
+      </div>
+    </div>
+
+    <!-- Boundary Delineation -->
+    <div class="info-section">
+      <div class="info-section-header">🗺️ Boundary Delineation</div>
+      <div class="info-section-body">
+        <div class="info-row"><div class="info-label">Boundary Status:</div><div class="info-value">${bndStatus}</div></div>
+        <div class="info-row">
+          <div class="info-label">Final Boundary Map:</div>
+          <div class="info-value">${pdfFinal}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">2015 Satellite Map:</div>
+          <div class="info-value">${pdfSat}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <button class="pdf-btn" onclick="goHome()" style="background:linear-gradient(180deg,#FFF,#ECE9D8 50%,#D6D2C2);">
+        ◀ Back to All Colonies
+      </button>
+    </div>
+  `;
+
+  document.getElementById("statusText").textContent = `Viewing: ${c.name}`;
+  window.scrollTo(0, 0);
+}
+
+/* ── View Switching ── */
+function showView(name) {
+  document.getElementById("listingView").classList.toggle("active", name === "listing");
+  document.getElementById("detailView").classList.toggle("active", name === "detail");
+}
+function goHome() {
+  showView("listing");
+  document.getElementById("breadcrumb").textContent =
+    cat === "affluent" ? "Affluent Colonies" : cat === "regular" ? "Regular UCs" : "All Colonies";
+  doSearch();
+}
+
+/* ── Initial Load ── */
+loadDataset();
+</script>
+</body>
+</html>
